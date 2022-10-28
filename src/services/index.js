@@ -1,4 +1,4 @@
-export function Post(url = apiName, body) {
+export function Post(url, body) {
   return new Promise((resolve, reject) => {
     fetch(`/${url}`, {
       method: 'POST',

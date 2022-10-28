@@ -16,3 +16,5 @@ mongoose.connect(connectionString, {
 process.on('uncaughtException', (err) => {
   console.log('Uncaught exception:', err);
 });
+
+module.exports = mongoose;

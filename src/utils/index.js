@@ -3,8 +3,7 @@ export const validInputTypes = [
   "password",
   "number",
   "checkbox",
-  "email",
-  "select",
+  "email"
 ];
 
 export const URL = `http://localhost:3000`;

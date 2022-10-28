@@ -58,7 +58,7 @@ export const SearchBar = () => {
 			/>
       {!!result.data && <Fade className="position-absolute shadow border p-3 bg-white w-100 mt-1 rounded-bottom">
         {result.data?.map(({ path }) => <Link key={path} href={`/${path}`}>
-			    <a className={`result d-block text-capitalize`}>{path}</a>
+			    <a style={{ fontSize: '.9em'}} className={`result d-block text-capitalize`}>{path}</a>
 		    </Link>)}
         {!result.data?.length && <small className="fst-italic">No results</small>}
       </Fade>}

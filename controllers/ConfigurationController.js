@@ -10,17 +10,17 @@ class ConfigurationController {
   */
   async get(req, res) {
     const { path } = req.params;
-    const isNumber = /^\d+$/;
 
-    const page = isNumber.test(path)
-    ? await this.configurationService.getById(path)
-    : await this.configurationService.getByPath(path)
+    try {
+        const page = await this.configurationService.getByPath(path)
 
-    if (!page) {
-      res.sendStatus(404);
+      if (!page) {
+        res.sendStatus(404);
+      }
+      res.json(page)
+    } catch (err) {
+      res.sendStatus(500)
     }
-
-    res.json(page)
   }
 
   async index(req, res) {

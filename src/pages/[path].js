@@ -1,19 +1,12 @@
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Head from "next/head";
-import {
-	FormGroup,
-	Form,
-	Button,
-	Spinner,
-	UncontrolledAlert,
-} from "reactstrap";
 
-import { Input } from "../Components/Input";
+import { Form } from '../Components/Form';
+
 import { Post } from "../services";
 import { validInputTypes, URL } from "../utils";
 
-export default function Page({ title, inputs, path, _id }) {
+export default function Page({ title, inputs, path }) {
 	const [state, setState] = useState([]);
 	const [saving, setSaving] = useState(false);
 	const [alert, setAlert] = useState({
@@ -30,7 +23,7 @@ export default function Page({ title, inputs, path, _id }) {
 		if (!inputs) return;
 
 		inputs.forEach((el) => {
-			if (el.conditions?.render) {
+			if (!!el.conditions?.render.length) {
 				const item = el.conditions.render.flat()[0];
 
 				const obj = {
@@ -68,8 +61,10 @@ export default function Page({ title, inputs, path, _id }) {
 				const { conditions, ...data } = item;
 				const render = shouldRender(item.name);
 
+				const name = data.name || data.label || data.target;
+
 				return {
-					name: data.name || data.label || data.target,
+					name,
 					render,
 					value: "",
 					...data,
@@ -83,7 +78,11 @@ export default function Page({ title, inputs, path, _id }) {
 
 		if (comparision === "includes") {
 			if (!!values?.length) {
-				return values.some((el) => el.includes(element?.value));
+				const value = values.some((el) => el.includes(element?.value));
+				return {
+					value,
+					error: `Includes not alowed values (${values.join(", ")})`,
+				};
 			}
 		}
 
@@ -91,22 +90,32 @@ export default function Page({ title, inputs, path, _id }) {
 			if (!!values?.length) {
 				// origin es desde cual elemento llamo a la función
 				if (element.nodeName === "SELECT" && !!origin) {
-					return !Object.values(element.childNodes).some(
-						(el) => el.value.toLowerCase() === origin.value.toLowerCase()
-					);
+					return {
+						value: !Object.values(element.childNodes).some(
+							(el) => el.value.toLowerCase() === origin.value.toLowerCase()
+						),
+						error: `Should not includes ${values.join(", ")}`,
+					};
 				}
-				return !values.some((el) => el.includes(element?.value));
+				return {
+					value: !values.some((el) => el.includes(element?.value)),
+					error: `Should not includes ${values.join(", ")}`,
+				};
 			}
 		}
 
 		if (comparision === "same") {
-			return element?.value === origin?.value;
+			const value = element?.value === origin?.value;
+			const error = `Value should be equal to ${element.name}`;
+			return { value, error };
 		}
 
-		return false;
+		return { value: false, error: "" };
 	}
 
 	function shouldRender(input) {
+		if (!input) return;
+
 		let valids = [];
 
 		observeChanges.render.forEach((el) => {
@@ -117,7 +126,7 @@ export default function Page({ title, inputs, path, _id }) {
 
 		if (!valids.length) return true;
 
-		return valids.every((el) => el);
+		return valids.every((el) => el.value);
 	}
 
 	function checkValidation(target) {
@@ -125,24 +134,64 @@ export default function Page({ title, inputs, path, _id }) {
 			(el) => el.observe === target.name
 		);
 
+		let valids = [];
+
+		const regex = new RegExp(target.attributes.pattern?.value);
+
+		if (!regex.test(target.value)) {
+			showErrorMessage(target.validationMessage || "Error", target);
+		} else {
+			hideErrorMessage(target);
+		}
+
 		if (!isObserved) {
 			return;
 		}
 
-		let valids = [];
-		observeChanges.validation.forEach((el) => {
-			if (el.name === target.name) {
-				valids.push(compareTo(el.conditions, target));
-			}
-		});
-
-		if (valids.every((el) => !el)) {
-			target.setCustomValidity("Error");
-			target.classList.add("is-invalid");
-		} else {
-			target.setCustomValidity("");
-			target.classList.remove("is-invalid");
+		if (isObserved) {
+			observeChanges.validation.forEach((el) => {
+				if (el.name === target.name) {
+					valids.push(compareTo(el.conditions, target));
+				}
+			});
 		}
+
+		let errors = [];
+
+		if (
+			valids.every((el) => {
+				errors.push(el.error);
+				return !el.value;
+			})
+		) {
+			let msg = "Error";
+			if (!!errors?.length) {
+				msg = [...new Set(errors)].join(" - ");
+			}
+
+			showErrorMessage(msg, target);
+		} else {
+			hideErrorMessage(target);
+		}
+	}
+
+	function showErrorMessage(msg, target) {
+		const div = target.parentNode.querySelector(".invalid-feedback");
+		if (!!div && msg) {
+			div.innerHTML = msg;
+		}
+		target.setCustomValidity(msg);
+		target.reportValidity();
+		target.classList.add("is-invalid");
+	}
+
+	function hideErrorMessage(target) {
+		const div = target.parentNode.querySelector(".invalid-feedback");
+		if (!!div) {
+			div.innerHTML = "";
+		}
+		target.setCustomValidity("");
+		target.classList.remove("is-invalid");
 	}
 
 	function handleChange(e) {
@@ -175,7 +224,8 @@ export default function Page({ title, inputs, path, _id }) {
 		e.target.classList.add("was-validated");
 
 		const data = state.reduce((prev, cur) => {
-			return validInputTypes.includes(cur.type)
+			const valids = [...validInputTypes, "select"];
+			return valids.includes(cur.type)
 				? { ...prev, [cur.name]: cur.value }
 				: { ...prev };
 		}, {});
@@ -223,51 +273,7 @@ export default function Page({ title, inputs, path, _id }) {
 
 			<main>
 				<h1 className="text-center">{title}</h1>
-				<Form onSubmit={handleSubmit}>
-					{state.map((item) => (
-						<FormGroup key={item.name}>
-							{validInputTypes.includes(item.type) && (
-								<Input handleChange={handleChange} {...item} />
-							)}
-
-							{item.type === "button" && (
-								<div className="d-flex justify-space-between align-items-center mb-4">
-									<div className="flex-grow-1 pe-5 d-flex align-items-center ">
-										{!!alert.color && (
-											<UncontrolledAlert
-												className="m-0 flex-fill fade"
-												color={alert.color}
-											>
-												{alert.msg}
-											</UncontrolledAlert>
-										)}
-									</div>
-									<Button
-										disabled={saving}
-										className="d-flex align-items-center"
-										type="submit"
-									>
-										{saving && (
-											<Spinner className="spinner-border spinner-border-sm me-2" />
-										)}
-										{`${saving ? "Wait" : item.label}`}
-									</Button>
-								</div>
-							)}
-
-							{item.type === "link" &&
-								(item.target[0] === "_" ? (
-									<a href={item.to || item.target} target={item.target}>
-										{item.text || item.label}
-									</a>
-								) : (
-									<Link href={item.to || item.target}>
-										<a>{item.text || item.label}</a>
-									</Link>
-								))}
-						</FormGroup>
-					))}
-				</Form>
+				<Form handleChange={handleChange} handleSubmit={handleSubmit} state={state} alert={alert} saving={saving} />
 			</main>
 		</>
 	);
@@ -289,7 +295,11 @@ export const getStaticProps = async ({ params: { path } }) => {
 	const res = await fetch(`${URL}/configuration/${path}`);
 	const page = await res.json();
 
+	if (!page) {
+		notFound: true;
+	}
+
 	return {
-		props: page[0],
+		props: page,
 	};
 };
