@@ -6,4 +6,4 @@ export const validInputTypes = [
   "email"
 ];
 
-export const URL = `http://localhost:3000`;
+export const URL = process.env.URL;

@@ -63,10 +63,12 @@ export default function Page({ title, inputs, path }) {
 
 				const name = data.name || data.label || data.target;
 
+				const value = data.value || data.type === 'select' ? item.options[0]?.value : ''
+
 				return {
 					name,
 					render,
-					value: "",
+					value,
 					...data,
 				};
 			})
@@ -223,8 +225,9 @@ export default function Page({ title, inputs, path }) {
 
 		e.target.classList.add("was-validated");
 
+		const valids = [...validInputTypes, "select"];
 		const data = state.reduce((prev, cur) => {
-			const valids = [...validInputTypes, "select"];
+			
 			return valids.includes(cur.type)
 				? { ...prev, [cur.name]: cur.value }
 				: { ...prev };

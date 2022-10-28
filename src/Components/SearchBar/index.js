@@ -2,7 +2,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 import { Input, Fade } from "reactstrap";
-import { URL } from '../../utils';
 
 export const SearchBar = () => {
 	const [inputSearch, setInputSearch] = useState("");
@@ -39,7 +38,7 @@ export const SearchBar = () => {
 	}
 
 	async function search(value) {
-    const result = await fetch(`${URL}/configuration?search=${value}`);
+    const result = await fetch(`/configuration?search=${value}`);
     const data = await result.json();
 
 		setResult({
