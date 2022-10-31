@@ -37,7 +37,7 @@ app.prepare().then(() => {
 			});
 		}
 
-		ConfigurationControllerInstance.get(req, res);
+		return ConfigurationControllerInstance.get(req, res);
 	});
 
 	server.get("/configuration", (req, res) => {
@@ -46,13 +46,16 @@ app.prepare().then(() => {
 				error: "DB is not connected",
 			});
 		}
-		ConfigurationControllerInstance.index(req, res);
+		return ConfigurationControllerInstance.index(req, res);
 	});
 
 	server.post("/:path", (req, res) => {
 		console.log(req.params.path, ':', req.body);
 	
-		return res.send("ok");
+		return res.json({
+			message: 'received',
+			data: req.body
+		});
 	});
 
 	server.all("*", (req, res) => {

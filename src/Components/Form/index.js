@@ -10,6 +10,7 @@ import {
 import { validInputTypes } from "../../utils";
 
 import { Text } from "../Field/Text";
+import { Check } from "../Field/Check";
 import { Select } from "../Field/Select";
 
 export const Form = ({ handleChange, handleSubmit, state, alert, saving }) => {
@@ -17,6 +18,10 @@ export const Form = ({ handleChange, handleSubmit, state, alert, saving }) => {
 	<BForm onSubmit={handleSubmit}>
 		{state.map((item) => (
 			<FormGroup key={item.name}>
+				{item.type === "checkbox" && (
+					<Check handleChange={handleChange} {...item} />
+				)}
+
 				{item.type === "select" && (
 					<Select handleChange={handleChange} {...item} />
 				)}
@@ -30,14 +35,14 @@ export const Form = ({ handleChange, handleSubmit, state, alert, saving }) => {
 						<div className="flex-grow-1 pe-5 d-flex align-items-center ">
 							{!!alert.color && (
 								<UncontrolledAlert
-									className="m-0 flex-fill fade"
+									className="m-0 flex-fill fade rounded"
 									color={alert.color}
 								>
 									{alert.msg}
 								</UncontrolledAlert>
 							)}
 						</div>
-						<Button
+						{item.render && <Button
 							disabled={saving}
 							className="d-flex align-items-center"
 							type="submit"
@@ -46,7 +51,7 @@ export const Form = ({ handleChange, handleSubmit, state, alert, saving }) => {
 								<Spinner className="spinner-border spinner-border-sm me-2" />
 							)}
 							{`${saving ? "Wait" : item.label}`}
-						</Button>
+						</Button>}
 					</div>
 				)}
 

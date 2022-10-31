@@ -2,7 +2,6 @@ export const validInputTypes = [
   "text",
   "password",
   "number",
-  "checkbox",
   "email"
 ];
 

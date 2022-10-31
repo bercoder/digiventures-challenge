@@ -8,6 +8,7 @@ import { validInputTypes, URL } from "../utils";
 
 export default function Page({ title, inputs, path }) {
 	const [state, setState] = useState([]);
+	const [initialState, setInitialState] = useState([]);
 	const [saving, setSaving] = useState(false);
 	const [alert, setAlert] = useState({
 		color: null,
@@ -22,20 +23,22 @@ export default function Page({ title, inputs, path }) {
 	useEffect(() => {
 		if (!inputs) return;
 
+		let render = []
+		let validation = []
+
 		inputs.forEach((el) => {
 			if (!!el.conditions?.render.length) {
 				const item = el.conditions.render.flat()[0];
 
+				const name = el.name || el.label || el.target;
+
 				const obj = {
-					name: el.name,
+					name,
 					observe: item.input,
 					conditions: item,
 				};
 
-				setObserveChanges((prev) => ({
-					validation: [...prev.validation],
-					render: [...prev.render, obj],
-				}));
+				render.push(obj)
 			}
 
 			if (el.conditions?.validations) {
@@ -47,40 +50,55 @@ export default function Page({ title, inputs, path }) {
 					conditions: element,
 				}));
 
-				setObserveChanges((prev) => ({
-					validation: [...prev.validation, ...items],
-					render: [...prev.render],
-				}));
+				if (!!items.length) validation = [...validation, ...items]
+
 			}
+			setObserveChanges({
+				validation,
+				render
+			})
 		});
 	}, [path]);
 
 	useEffect(() => {
-		setState(
-			inputs.map((item) => {
-				const { conditions, ...data } = item;
-				const render = shouldRender(item.name);
+		const inputsData = inputs.map((item) => {
+			const { conditions, ...data } = item;
 
-				const name = data.name || data.label || data.target;
+			const render = typeof item.name === "undefined" ? true : shouldRender(item.name);
+			
+			const name = data.name || data.label || data.target;
+			
+			const value = data.value || data.type === 'select' ? item.options[0]?.value : ''
 
-				const value = data.value || data.type === 'select' ? item.options[0]?.value : ''
+			return {
+				name,
+				render,
+				value,
+				...data,
+			};
+		});
 
-				return {
-					name,
-					render,
-					value,
-					...data,
-				};
-			})
-		);
-	}, [observeChanges.render, path]);
+		setState(inputsData);
+		setInitialState(inputsData);
+	}, [observeChanges.render, path])
 
 	function compareTo({ comparision, input, values }, origin = null) {
 		const element = document.getElementById(input);
 
 		if (comparision === "includes") {
 			if (!!values?.length) {
-				const value = values.some((el) => el.includes(element?.value));
+				const value = values.some((el) => {
+
+					if (el === "true" ) {
+						return Boolean(element?.checked) === true;
+					}
+
+					if (el === "false") {
+						return Boolean(element?.checked) === false;
+					}
+					
+					return el.includes(element?.value)
+				});
 				return {
 					value,
 					error: `Includes not alowed values (${values.join(", ")})`,
@@ -225,7 +243,7 @@ export default function Page({ title, inputs, path }) {
 
 		e.target.classList.add("was-validated");
 
-		const valids = [...validInputTypes, "select"];
+		const valids = [...validInputTypes, "select", "checkbox"];
 		const data = state.reduce((prev, cur) => {
 			
 			return valids.includes(cur.type)
@@ -240,12 +258,7 @@ export default function Page({ title, inputs, path }) {
 					color: "success",
 					msg: "Form submitted",
 				});
-				setState((prevState) =>
-					prevState.map((item) => ({
-						...item,
-						value: "",
-					}))
-				);
+				setState(initialState);
 				e.target.classList.remove("was-validated");
 				e.target.querySelector("input").focus();
 			})
@@ -263,7 +276,7 @@ export default function Page({ title, inputs, path }) {
 							color: null,
 							msg: null,
 						}),
-					2500
+					1500
 				);
 			});
 	}
@@ -283,14 +296,18 @@ export default function Page({ title, inputs, path }) {
 }
 
 export const getServerSideProps = async ({ params: { path } }) => {
+
 	const res = await fetch(`${URL}/configuration/${path}`);
-	const page = await res.json();
+	const page = res.status === 404 ? null : await res.json();
 
 	if (!page) {
-		notFound: true;
+		return {
+			notFound: true,
+		}
 	}
 
 	return {
 		props: page,
 	};
+
 };
