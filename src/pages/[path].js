@@ -282,19 +282,7 @@ export default function Page({ title, inputs, path }) {
 	);
 }
 
-export const getStaticPaths = async () => {
-	const res = await fetch(`${URL}/configuration`);
-	const pages = await res.json();
-
-	return {
-		paths: Object.values(pages).map((page) => ({
-			params: { path: page.path },
-		})),
-		fallback: false,
-	};
-};
-
-export const getStaticProps = async ({ params: { path } }) => {
+export const getServerSideProps = async ({ params: { path } }) => {
 	const res = await fetch(`${URL}/configuration/${path}`);
 	const page = await res.json();
 
